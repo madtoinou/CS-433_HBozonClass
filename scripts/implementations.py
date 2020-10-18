@@ -194,9 +194,9 @@ def build_k_indices(y, k_fold, seed):
     return np.array(k_indices)
 
 
-
+"""
 def cross_validation(y, x, k_indices, k, lambda_, degree):
-    """return the loss of ridge regression."""
+    #return the loss of ridge regression.
     
     x_test = x[k_indices[k]]
     y_test = y[k_indices[k]]
@@ -209,42 +209,48 @@ def cross_validation(y, x, k_indices, k, lambda_, degree):
     loss_te = np.sqrt(2*compute_mse(y_test,phi_te,w))
     
     return loss_tr, loss_te, w
-
+"""
 
 
 def sigmoid(t):
     """apply sigmoid function on t."""
 
-    s = 1.0/(1.0 + np.exp(-t))
-    
+    s = 1.0/(1.0 + np.exp(-t))    
     return s
 
 
 
 def calculate_loss(y, tx, w):
     """compute the cost by negative log likelihood."""
+
+    pred = sigmoid(tx.dot(w))
     
-    Z = np.matmul(tx, w)
-    prediction = sigmoid(Z)
-    loss = (-1)*(y.T @ (np.log(prediction))) + ((1 - y).T @ np.log(1 - prediction))
-    
-    return np.squeeze(loss)
+    loss = y.T.dot(np.log(pred)) + (1 - y).T.dot(np.log(1 - pred))
+    return np.squeeze(- loss)
 
 
 
 def calculate_gradient(y, tx, w):
     """compute the gradient of loss for logistic regression."""
 
-    cte = tx.shape[1]
-    Z = tx @ w
-    prediction = sigmoid(Z)
-    gradient = (tx.T @ (prediction - y)) * (1.0/cte)
-    
-    return gradient
-
+    pred = sigmoid(tx.dot(w))
+    grad = tx.T.dot(pred.reshape(y.shape[0]) - y)
+    return grad
 
 
 def learning_by_gradient_descent(y, tx, w, gamma):
+    """
+    Do one step of gradient descent using logistic regression.
+    Return the loss and the updated w.
+    """
+
+    loss = calculate_loss(y, tx, w)
+    grad = calculate_gradient(y, tx, w)
+    w = w - gamma*grad
+    
+    return loss, w
+
+def learning_by_gradient_descent_stoch(y, tx, w, gamma):
     """
     Do one step of gradient descent using logistic regression.
     Return the loss and the updated w.
@@ -275,9 +281,9 @@ def calculate_hessian(y, tx, w):
 def logistic_regression(y, tx, w):
     """return the loss, gradient, and hessian."""
 
-    loss = calculate_loss(y, tx, w)
-    grad = calculate_gradient(y, tx, w)
-    hess = calculate_hessian(y, tx, w)
+    loss = calculate_loss(y, tx, w)/tx.shape[0]
+    grad = calculate_gradient(y, tx, w)/tx.shape[0]
+    hess = calculate_hessian(y, tx, w)/tx.shape[0]
     
     return loss, grad, hess
 
