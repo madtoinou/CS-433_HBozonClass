@@ -224,8 +224,8 @@ def calculate_loss(y, tx, w):
     """compute the cost by negative log likelihood."""
 
     pred = sigmoid(tx.dot(w))
-    
-    loss = y.T.dot(np.log(pred)) + (1 - y).T.dot(np.log(1 - pred))
+    #ugly try to avoid infinite value in loss calculus, remove the [np.where...] to restaure intial version
+    loss = y[np.where(y == 1)].T.dot(np.log(pred[np.where(y == 1)])) + (1 - y[np.where(y == 0)]).T.dot(np.log(1 - pred[np.where(y == 0)]))
     return np.squeeze(- loss)
 
 
