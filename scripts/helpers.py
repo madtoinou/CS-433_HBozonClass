@@ -139,10 +139,7 @@ def build_model_cst(prediction, data, log_corr = True):
     if log_corr:
         prediction[np.where(prediction == -1)] = 0
     y = prediction
-    x = data
-    len_ = len(y)
-    tx = np.c_[np.ones(len_), x]
-    return y, tx
+    return y, data
 
 def standardize(x):
     """Standardize along features axis, implemented to ignore jet_num features."""
@@ -180,9 +177,21 @@ def clean(data):
     data[inds] = np.take(col_mean, inds[1])
     return data
 
+def log_transform_data(data):
+    """Apply log-transformation to the columns whose distribution have showed right-skewness """
+    
+    log_col = [3 , 8, 9, 13, 16, 19, 29]
+    logColumns = data[:, log_col]
+    indices = np.where(logColumns != -999)
+    logColumns[indices] = np.log(1 + logColumns[indices])
+
+    data = np.delete(data, log_col, 1)
+    data = np.hstack((data, logColumns))
+    return data
+
 def process_data(data, degree):
     """ Concatenate every preprocessing steps into one"""
-    #TO IMPLEMENT >> log transformation of right-sqd data
+    data = log_transform_data(data)
     data = clean(data)
     data = build_poly(data, degree)
     return standardize(data)
