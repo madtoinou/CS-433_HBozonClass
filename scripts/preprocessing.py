@@ -19,22 +19,7 @@ def log_transform(tX):
     """Perform logarithmic function on data, 
        useful for skewed distributions"""
     
-    tX_logs = np.zeros((tX.shape))
-    for i in range(tX.shape[1]):
-        if np.all(tX[:,i] > 0):
-            print(features_names[i])
-            tX_log = np.log(tX[:,i])
-            tX_logs[:,i] = tX_log
-            plt.hist(tX_log, bins=2)
-            plt.show()
-        else:
-            tX_log = tX[:,i]
-            tX_logs[:,i] = tX_log
-            plt.hist(tX_log, bins=2)
-            plt.show()
-            
-    tX = tX_logs
-    return tX
+    return np.log(1+tX)
 
 def normalize_data(tX):
     """Perform normalization of data"""
@@ -60,11 +45,11 @@ def personalized_transform(tX, correlation=False):
     if correlation == False:
         
         # transform the features with logarithm
-        list_1 = [0,2,3,8,9,10,11,12,13,16,19,21,23,26,29]
+        list_1 = [3,8,9,29,16,19,13]
         tX[:, list_1] = log_transform(tX[:, list_1])
         
         # normalize data
-        list_2 = [4,5,6,7,14,24,25,27,28]
+        list_2 = [3,8,9,29,16,19,13,17,14]
         tX[:, list_2] = normalize_data(tX[:, list_2])
         
     return tX
