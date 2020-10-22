@@ -323,3 +323,86 @@ def learning_by_penalized_gradient(y, tx, w, gamma, lambda_):
     w -= gamma*(np.linalg.inv(hess) @ grad)
     
     return loss, w
+
+# -*- coding: utf-8 -*-
+"""Implemented functions for preprocessing steps"""
+
+import numpy as np
+
+def clean_data(tX):
+    '''Set NaN values to the value
+       of the mean for each feature'''
+    
+    tX[tX <= -999] = np.nan
+    col_mean = np.nanmean(tX, axis=0)
+    inds = np.where(np.isnan(tX))
+    tX[inds] = np.take(col_mean, inds[1])
+    
+    return tX
+
+
+def log_transform(tX):
+    """Perform logarithmic function on data, 
+       useful for skewed distributions"""
+    
+    return np.log(1+tX)
+
+def normalize_data_minmax(tX):
+    """Perform normalization of data"""
+    
+    #temp_mean = []
+    #temp_min_max = []
+    
+    for i in range(tX.shape[1]):
+        #temp_mean.append(np.mean(tX[:,i]))
+        #temp_min_max.append((np.max(tX[:,i]) - np.min(tX[:,i])))
+        tX[:,i] = tX[:,i] - np.mean(tX[:,i])
+        tX[:,i] = tX[:,i] / (np.max(tX[:,i]) - np.min(tX[:,i]))
+    
+    #tX[:,22] = temp_min_max[22]*tX[:,22]
+    #tX[:,22] += temp_mean[22]
+    
+    return tX
+
+def normalize_data_std(tX):
+    """Standardize along features axis, implemented to ignore jet_num features."""
+    #Mean = 0
+    tX = tX - np.nanmean(tX, axis=0)
+    #STD feature-wise
+    std_col = np.nanstd(tX, axis=0)
+    #Std = 1
+    tX[:, std_col > 0] = tX[:, std_col > 0] / std_col[std_col > 0]
+    return tX
+
+def cols_log_transform(tX):
+    """Apply transformation, depending on the 
+       type of distribution"""
+    
+    # transform the features with logarithm
+    list_1 = [3,8,9,22,16,19,13]
+    tX[:, list_1] = np.log(1+tX[:, list_1])
+
+    return tX
+
+
+def check_correlation(tX):
+    """Study correlation between data
+       Only data with more than 0.9 
+       correlation score are plotted"""
+    
+    a = []
+    temp = 0
+    for i in range(tX.shape[1]):
+        for j in range(tX.shape[1]):
+            print(features_names[i])
+            if i != j:
+                temp = np.corrcoef(tX[:,i],tX[:,j])
+                a.append(temp)
+                if abs(temp[0,1]) > 0.9:
+                    print("Correlation scores for feature {}: ".format(features_names[i+2]))
+                    print(features_names[i+2],features_names[j+2])
+                    print(temp)
+                    u.append(temp)
+                    plt.scatter(tX[:,i],tX[:,j])
+                    plt.show()
+        a = []
