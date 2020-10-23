@@ -443,6 +443,30 @@ def split_jet_num(prediction, data):
 
     return pred_0, pred_1, pred_2, dat_0, dat_1, dat_2, inds_0, inds_1, inds_2
 
+def split_jet_num4(prediction, data):
+    """jet_num distribution constrain heavily the model by acting as a categorical data, we decide to try to split
+    the model into submodels based on this feature
+    /!\ jet_num needs to be the last column"""
+    
+    inds_0 = np.nonzero(data[:, -1] == 0)[0]
+    dat_0 = data[inds_0, :-1]
+    pred_0 = prediction[inds_0]
+
+    inds_1 = np.nonzero(data[:, -1] == 1)[0]
+    dat_1 = data[inds_1, :-1]
+    pred_1 = prediction[inds_1]
+    
+    #jet_num = 2 or 3
+    inds_2 = np.nonzero(data[:, -1] == 2)[0]
+    dat_2 = data[inds_2, :-1]
+    pred_2 = prediction[inds_2]
+    
+    inds_3 = np.nonzero(data[:, -1] == 3)[0]
+    dat_3 = data[inds_3, :-1]
+    pred_3 = prediction[inds_3]
+
+    return pred_0, pred_1, pred_2, pred_3, dat_0, dat_1, dat_2, dat_3, inds_0, inds_1, inds_2, inds_3
+
 #combine the predictions after the jet_num splitting
 def pred_jet_num(weights, degree, tx_test):
     
@@ -506,6 +530,72 @@ def pred_jet_num(weights, degree, tx_test):
     pred[inds_2] = y_pred_2
     return pred
 
+#combine the predictions after the jet_num splitting
+def pred_jet_num4(weights, degree, tx_test):
+    
+    tx_test.T[[22,-1]] = tx_test.T[[-1,22]]
+    tx_test[tx_test == -999] = np.nan
+    
+    #prediction array
+    pred = np.zeros(tx_test.shape[0])
+
+    #split data based on jet_num
+    #remove the jet_num column -> change the shape of the training set
+    pred_0, pred_1, pred_2, pred_3, dat_0, dat_1, dat_2, dat_3, inds_0, inds_1, inds_2, inds_3 = split_jet_num4(pred,tx_test)
+
+    ##prepocessing
+    dat_0 = cols_log_transform(dat_0)
+    dat_1 = cols_log_transform(dat_1)
+    dat_2 = cols_log_transform(dat_2)
+    dat_3 = cols_log_transform(dat_3)
+
+    """we don't have the same shape because of jet_num removal
+    instead of (shape-1)*deg + 2 -> shape*deg +1"""
+    dat_0_ = np.zeros([dat_0.shape[0], (dat_0.shape[1])*degree[0] +1])
+    dat_1_ = np.zeros([dat_1.shape[0], (dat_1.shape[1])*degree[1] +1])
+    dat_2_ = np.zeros([dat_2.shape[0], (dat_2.shape[1])*degree[2] +1])
+    dat_3_ = np.zeros([dat_3.shape[0], (dat_3.shape[1])*degree[3] +1])
+
+
+    dat_0_ = build_poly(dat_0,degree[0])
+    dat_1_ = build_poly(dat_1,degree[1])
+    dat_2_ = build_poly(dat_2,degree[2])
+    dat_3_ = build_poly(dat_3,degree[3])
+
+
+    #we don't standardize the first column because its the constant
+    #introduced by the build_poly
+    dat_0_[:,1:] = normalize_data_std(dat_0_[:,1:])
+    dat_1_[:,1:] = normalize_data_std(dat_1_[:,1:])
+    dat_2_[:,1:] = normalize_data_std(dat_2_[:,1:])
+    dat_3_[:,1:] = normalize_data_std(dat_3_[:,1:])
+
+
+    dat_0_ = nan_to_medi(dat_0_)
+    dat_1_ = nan_to_medi(dat_1_)
+    dat_2_ = nan_to_medi(dat_2_)
+    dat_3_ = nan_to_medi(dat_3_)
+
+
+    #remove column with nan
+    dat_0_ = drop_nan_col(dat_0_)
+    dat_1_ = drop_nan_col(dat_1_)
+    dat_2_ = drop_nan_col(dat_2_)
+    dat_3_ = drop_nan_col(dat_3_)
+    
+    y_pred_0 = predict_labels(weights[0], dat_0_)
+    y_pred_1 = predict_labels(weights[1], dat_1_)
+    y_pred_2 = predict_labels(weights[2], dat_2_)
+    y_pred_3 = predict_labels(weights[3], dat_3_)
+
+    
+    #replacing the prediction in fornt of the original idx
+    pred[inds_0] = y_pred_0
+    pred[inds_1] = y_pred_1
+    pred[inds_2] = y_pred_2
+    pred[inds_3] = y_pred_3
+    return pred
+
 
 def check_correlation(tX):
     """Study correlation between data
@@ -528,3 +618,107 @@ def check_correlation(tX):
                     plt.scatter(tX[:,i],tX[:,j])
                     plt.show()
         a = []
+        
+def preproc_3split(y,tX):
+    # --- PREPROCESSING FOR HYPERPARAMETER OPTIMIZATION 3 SPLITS ---
+    #putting jet_num in the last column
+    tX[tX == -999] = np.nan
+
+    #split data based on jet_num
+    """WARNING tX must be unprocessed data so that the processing can
+    be jet_num specific WARNING""" 
+    #remove the jet_num column -> change the shape of the training set
+    pred_0, pred_1, pred_2, dat_0, dat_1, dat_2, inds_0, inds_1, inds_2 = split_jet_num(y,tX)
+
+    ##prepocessing
+    dat_0 = cols_log_transform(dat_0)
+    dat_1 = cols_log_transform(dat_1)
+    dat_2 = cols_log_transform(dat_2)
+
+    deg_0 = 3
+    deg_1 = 4
+    deg_2 = 6
+
+    """we don't have the same shape because of jet_num removal
+    instead of (shape-1)*deg + 2 -> shape*deg +1"""
+    dat_0_ = np.zeros([dat_0.shape[0], (dat_0.shape[1])*deg_0 +1])
+    dat_1_ = np.zeros([dat_1.shape[0], (dat_1.shape[1])*deg_1 +1])
+    dat_2_ = np.zeros([dat_2.shape[0], (dat_2.shape[1])*deg_2 +1])
+
+    dat_0_ = build_poly(dat_0,deg_0)
+    dat_1_ = build_poly(dat_1,deg_1)
+    dat_2_ = build_poly(dat_2,deg_2)
+
+    #we don't standardize the first column because its the constant
+    #introduced by the build_poly
+    dat_0_[:,1:] = normalize_data_std(dat_0_[:,1:])
+    dat_1_[:,1:] = normalize_data_std(dat_1_[:,1:])
+    dat_2_[:,1:] = normalize_data_std(dat_2_[:,1:])
+
+    dat_0_ = nan_to_medi(dat_0_)
+    dat_1_ = nan_to_medi(dat_1_)
+    dat_2_ = nan_to_medi(dat_2_)
+
+    #remove column with nan
+    dat_0_ = drop_nan_col(dat_0_)
+    dat_1_ = drop_nan_col(dat_1_)
+    dat_2_ = drop_nan_col(dat_2_)
+    return dat_0_, dat_1_, dat_2_
+
+def preproc_4split(y,tX):
+    # --- PREPROCESSING FOR HYPERPARAMETER OPTIMIZATION 4 SPLITS---
+    #putting jet_num in the last column
+    tX[tX == -999] = np.nan
+
+    #split data based on jet_num
+    """WARNING tX must be unprocessed data so that the processing can
+    be jet_num specific WARNING""" 
+    #remove the jet_num column -> change the shape of the training set
+    pred_0, pred_1, pred_2, pred_3, dat_0, dat_1, dat_2, dat_3, inds_0, inds_1, inds_2, inds_3 = split_jet_num4(y,tX)
+
+    ##prepocessing
+    dat_0 = cols_log_transform(dat_0)
+    dat_1 = cols_log_transform(dat_1)
+    dat_2 = cols_log_transform(dat_2)
+    dat_3 = cols_log_transform(dat_3)
+
+    deg_0 = 3
+    deg_1 = 4
+    deg_2 = 3
+    deg_3 = 5
+
+
+    """we don't have the same shape because of jet_num removal
+    instead of (shape-1)*deg + 2 -> shape*deg +1"""
+    dat_0_ = np.zeros([dat_0.shape[0], (dat_0.shape[1])*deg_0 +1])
+    dat_1_ = np.zeros([dat_1.shape[0], (dat_1.shape[1])*deg_1 +1])
+    dat_2_ = np.zeros([dat_2.shape[0], (dat_2.shape[1])*deg_2 +1])
+    dat_3_ = np.zeros([dat_3.shape[0], (dat_3.shape[1])*deg_3 +1])
+
+
+    dat_0_ = build_poly(dat_0,deg_0)
+    dat_1_ = build_poly(dat_1,deg_1)
+    dat_2_ = build_poly(dat_2,deg_2)
+    dat_3_ = build_poly(dat_3,deg_3)
+
+
+    #we don't standardize the first column because its the constant
+    #introduced by the build_poly
+    dat_0_[:,1:] = normalize_data_std(dat_0_[:,1:])
+    dat_1_[:,1:] = normalize_data_std(dat_1_[:,1:])
+    dat_2_[:,1:] = normalize_data_std(dat_2_[:,1:])
+    dat_3_[:,1:] = normalize_data_std(dat_3_[:,1:])
+
+
+    dat_0_ = nan_to_medi(dat_0_)
+    dat_1_ = nan_to_medi(dat_1_)
+    dat_2_ = nan_to_medi(dat_2_)
+    dat_3_ = nan_to_medi(dat_3_)
+
+
+    #remove column with nan
+    dat_0_ = drop_nan_col(dat_0_)
+    dat_1_ = drop_nan_col(dat_1_)
+    dat_2_ = drop_nan_col(dat_2_)
+    dat_3_ = drop_nan_col(dat_3_)
+    return dat_0_, dat_1_, dat_2_, dat_3_
