@@ -384,6 +384,69 @@ def cols_log_transform(tX):
 
     return tX
 
+def split_jet_num(prediction, data):
+    """jet_num distribution constrain heavily the model by acting as a categorical data, we decide to try to split
+    the model into submodels based on this feature
+    /!\ jet_num needs to be the last column"""
+    
+    inds_0 = np.nonzero(data[:, -1] == 0)[0]
+    dat_0 = data[inds_0, :-1]
+    pred_0 = prediction[inds_0]
+
+    inds_1 = np.nonzero(data[:, -1] == 1)[0]
+    dat_1 = data[inds_1, :-1]
+    pred_1 = prediction[inds_1]
+    
+    #jet_num = 2 or 3
+    inds_2 = np.nonzero(data[:, -1] > 1)[0]
+    dat_2 = data[inds_2, :-1]
+    pred_2 = prediction[inds_2]
+
+    return pred_0, pred_1, pred_2, dat_0, dat_1, dat_2, inds_0, inds_1, inds_2
+
+#combine the predictions after the jet_num splitting
+def pred_jet_num(weights,tx_test):
+    #prediction recipient
+    pred = np.zeros(tx_test.shape[0])
+    
+    #spliting based on jet_num
+    _, _, _, dat_0, dat_1, dat_2, inds_0, inds_1, inds_2 = split_jet_num(pred, tx_test)
+    
+    #preprocessing
+    dat_0 = cols_log_transform(dat_0)
+    dat_1 = cols_log_transform(dat_1)
+    dat_2 = cols_log_transform(dat_2)
+
+    deg = 7
+
+    dat_0_ = np.zeros([dat_0.shape[0], (dat_0.shape[1])*deg +1])
+    dat_1_ = np.zeros([dat_1.shape[0], (dat_1.shape[1])*deg +1])
+    dat_2_ = np.zeros([dat_2.shape[0], (dat_2.shape[1])*deg +1])
+
+    dat_0_ = build_poly(dat_0,deg)
+    dat_1_ = build_poly(dat_1,deg)
+    dat_2_ = build_poly(dat_2,deg)
+
+    #we don't standardize the first column because its the constant
+    #introduced by the build_poly
+    dat_0_[:,1:] = normalize_data_std(dat_0_[:,1:])
+    dat_1_[:,1:] = normalize_data_std(dat_1_[:,1:])
+    dat_2_[:,1:] = normalize_data_std(dat_2_[:,1:])
+
+    nan_to_mean(dat_0_)
+    nan_to_mean(dat_1_)
+    nan_to_mean(dat_2_)
+    
+    y_pred_0 = predict_labels(weights[0], dat_0_)
+    y_pred_1 = predict_labels(weights[1], dat_1_)
+    y_pred_2 = predict_labels(weights[2], dat_2_)
+    
+    #replacing the prediction in fornt of the original idx
+    pred[idns_0] = y_pred_0
+    pred[idns_1] = y_pred_1
+    pred[idns_2] = y_pred_2
+    return pred
+
 
 def check_correlation(tX):
     """Study correlation between data
