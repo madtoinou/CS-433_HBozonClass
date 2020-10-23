@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
+from proj1_helpers import *
 
 
 def compute_mse(y, tx, w):
@@ -384,6 +385,44 @@ def cols_log_transform(tX):
 
     return tX
 
+def nan_to_mean(x):
+    '''Set NaN values to the value of the mean for each feature'''
+    
+    x[x == -999] = np.nan
+    col_mean = np.nanmean(x, axis=0)
+    inds = np.where(np.isnan(x))
+    x[inds] = np.take(col_mean, inds[1])
+    
+    #if columns of nan, replace them by 0
+    #x[np.isnan(x)] =0
+    return x
+
+def nan_to_zero(x):
+    '''Set NaN values to the value of the mean for each feature'''
+    
+    x[x == -999] = np.nan
+    x[np.isnan(x)] = 0    
+    return x
+
+def nan_to_medi(x):
+    '''Set NaN values to the value of the mean for each feature'''
+    
+    x[x == -999] = np.nan
+    col_median = np.nanmedian(x, axis=0)
+    inds = np.where(np.isnan(x))
+    x[inds] = np.take(col_median, inds[1])
+    
+    #if columns of nan, replace them by 0
+    #x[np.isnan(x)] =0
+    return x
+
+def drop_nan_col(x):
+    col_median = np.nanmean(x, axis=0)
+    idx_col_nan = np.where(np.isnan(col_median))[0]
+    #non nan cols
+    idx_col = list(set([col_i for col_i in range(x.shape[1])])-set(idx_col_nan))
+    return x[:,idx_col]
+
 def split_jet_num(prediction, data):
     """jet_num distribution constrain heavily the model by acting as a categorical data, we decide to try to split
     the model into submodels based on this feature
@@ -405,8 +444,15 @@ def split_jet_num(prediction, data):
     return pred_0, pred_1, pred_2, dat_0, dat_1, dat_2, inds_0, inds_1, inds_2
 
 #combine the predictions after the jet_num splitting
-def pred_jet_num(weights,tx_test):
-    #prediction recipient
+def pred_jet_num(weights, degree, tx_test):
+    
+    #putting jet_num in the last column
+    tx_test.T[[22,-1]] = tx_test.T[[-1,22]]
+    
+    #put outlier to nan to facilitate the tratment
+    tx_test[tx_test == -999] = np.nan
+    
+    #prediction array
     pred = np.zeros(tx_test.shape[0])
     
     #spliting based on jet_num
@@ -417,34 +463,47 @@ def pred_jet_num(weights,tx_test):
     dat_1 = cols_log_transform(dat_1)
     dat_2 = cols_log_transform(dat_2)
 
-    deg = 7
+    dat_0_ = np.zeros([dat_0.shape[0], (dat_0.shape[1])*degree[0] +1])
+    dat_1_ = np.zeros([dat_1.shape[0], (dat_1.shape[1])*degree[1] +1])
+    dat_2_ = np.zeros([dat_2.shape[0], (dat_2.shape[1])*degree[2] +1])
 
-    dat_0_ = np.zeros([dat_0.shape[0], (dat_0.shape[1])*deg +1])
-    dat_1_ = np.zeros([dat_1.shape[0], (dat_1.shape[1])*deg +1])
-    dat_2_ = np.zeros([dat_2.shape[0], (dat_2.shape[1])*deg +1])
-
-    dat_0_ = build_poly(dat_0,deg)
-    dat_1_ = build_poly(dat_1,deg)
-    dat_2_ = build_poly(dat_2,deg)
+    dat_0_ = build_poly(dat_0,degree[0])
+    dat_1_ = build_poly(dat_1,degree[1])
+    dat_2_ = build_poly(dat_2,degree[2])
 
     #we don't standardize the first column because its the constant
     #introduced by the build_poly
     dat_0_[:,1:] = normalize_data_std(dat_0_[:,1:])
     dat_1_[:,1:] = normalize_data_std(dat_1_[:,1:])
     dat_2_[:,1:] = normalize_data_std(dat_2_[:,1:])
-
+    
+    """
     nan_to_mean(dat_0_)
     nan_to_mean(dat_1_)
     nan_to_mean(dat_2_)
+    -> 0.803
+    """
+    
+    nan_to_medi(dat_0_)
+    nan_to_medi(dat_1_)
+    nan_to_medi(dat_2_)
+    """
+    -> 0.803
+    """
+    
+    #remove column with nan
+    dat_0_ = drop_nan_col(dat_0_)
+    dat_1_ = drop_nan_col(dat_1_)
+    dat_2_ = drop_nan_col(dat_2_)
     
     y_pred_0 = predict_labels(weights[0], dat_0_)
     y_pred_1 = predict_labels(weights[1], dat_1_)
     y_pred_2 = predict_labels(weights[2], dat_2_)
     
     #replacing the prediction in fornt of the original idx
-    pred[idns_0] = y_pred_0
-    pred[idns_1] = y_pred_1
-    pred[idns_2] = y_pred_2
+    pred[inds_0] = y_pred_0
+    pred[inds_1] = y_pred_1
+    pred[inds_2] = y_pred_2
     return pred
 
 
