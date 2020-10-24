@@ -83,19 +83,30 @@ def cols_log_transform(tx):
 
     return tx
 
-def standardize_matrix(tx):
+def standardize_matrix(tx, mean=[], std=[]):
     """
     Standardize along features axis.
     """
-    #shift mean to 0
-    tx = tx - np.nanmean(tx, axis=0)
-    
-    #STD feature-wise
-    std_col = np.nanstd(tx, axis=0)
-    
-    # shift standard deviation to 1
-    tx[:, std_col > 0] = tx[:, std_col > 0] / std_col[std_col > 0]
-    return tx
+    #no exsiting params
+    if len(mean) == 0 and len(std) ==0:
+        #shift mean
+        nan_mean = np.nanmean(tx, axis=0)
+        tx = tx - nan_mean
+
+        #STD feature-wise
+        std_col = np.nanstd(tx, axis=0)
+
+        # shift standard deviation to 1
+        tx[:, std_col > 0] = tx[:, std_col > 0] / std_col[std_col > 0]
+        return tx, nan_mean, std_col
+    #knwon params
+    else:
+        #shift mean
+        tx = tx - mean
+
+        # shift standard deviation to 1
+        tx[:, std > 0] = tx[:, std > 0] / std[std > 0]
+        return tx, mean, std
 
 def drop_nan_col(tx):
     """
@@ -114,7 +125,7 @@ def nan_to_median(tx):
     
     return tx
             
-def preprocessing(dat_i, degree):
+def preprocessing(dat_i, degree, mean=[], std=[]):
     """
     """
     
@@ -131,7 +142,7 @@ def preprocessing(dat_i, degree):
     dat_tmp = build_poly(dat_tmp,degree)
 
     #standardize the features matrix (except the constant from build_poly)
-    dat_f[:,1:] = standardize_matrix(dat_f[:,1:])
+    dat_f[:,1:], mean, std = standardize_matrix(dat_f[:,1:], mean, std)
 
     #remove column containing only nans
     dat_f = drop_nan_col(dat_f)
@@ -139,4 +150,4 @@ def preprocessing(dat_i, degree):
     #change the nan values to the median of the column
     dat_f = nan_to_median(dat_f)
 
-    return dat_f
+    return dat_f, mean, std
