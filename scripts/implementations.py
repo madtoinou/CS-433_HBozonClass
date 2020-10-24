@@ -140,12 +140,20 @@ def build_poly(x, degree):
 
 def least_squares(y, tx):
     """calculate the least squares solution using normal equations."""
+    #version original
+    #A = tx.T @ tx + 10**-10 * diag
+    #b = tx.T @ y
+    #weights_opt = np.linalg.solve(A, b)
+    #mse = compute_mse(y, tx, weights_opt) 
     
-    weights_opt = (np.linalg.solve(tx.T @ tx, tx.T @ y))     # When using solve(), numerical inaccuracies are minimized
-    cte = (1/(2*len(y)))
-    mse = compute_loss(y, tx, weights_opt) 
+    #avoid the sigular matrices
+    diag = np.eye(tx.shape[1])
+    A = tx.T @ tx +10**-40 * diag
+    b = tx.T @ y
+    weights_opt = np.linalg.solve(A, b)
+    mse = compute_mse(y, tx, weights_opt) 
     
-    return weights_opt, loss
+    return weights_opt, mse
 
 
 
@@ -469,7 +477,7 @@ def split_jet_num4(prediction, data):
 
 #combine the predictions after the jet_num splitting
 def pred_jet_num(weights, degree, tx_test):
-    
+    """
     #putting jet_num in the last column
     tx_test.T[[22,-1]] = tx_test.T[[-1,22]]
     
@@ -501,28 +509,30 @@ def pred_jet_num(weights, degree, tx_test):
     dat_1_[:,1:] = normalize_data_std(dat_1_[:,1:])
     dat_2_[:,1:] = normalize_data_std(dat_2_[:,1:])
     
-    """
-    nan_to_mean(dat_0_)
-    nan_to_mean(dat_1_)
-    nan_to_mean(dat_2_)
-    -> 0.803
-    """
+    #nan_to_mean(dat_0_)
+    #nan_to_mean(dat_1_)
+    #nan_to_mean(dat_2_)
+    #-> 0.803
     
-    nan_to_medi(dat_0_)
-    nan_to_medi(dat_1_)
-    nan_to_medi(dat_2_)
-    """
-    -> 0.803
-    """
+    #nan_to_medi(dat_0_)
+    #nan_to_medi(dat_1_)
+    #nan_to_medi(dat_2_)
+    #-> 0.803
     
     #remove column with nan
     dat_0_ = drop_nan_col(dat_0_)
     dat_1_ = drop_nan_col(dat_1_)
     dat_2_ = drop_nan_col(dat_2_)
+    """
+    #prediction array
+    pred = np.zeros(tx_test.shape[0])
+    
+    _, _, _, dat_0_, dat_1_, dat_2_, inds_0, inds_1, inds_2 = preproc_3split(pred,tx_test)
     
     y_pred_0 = predict_labels(weights[0], dat_0_)
     y_pred_1 = predict_labels(weights[1], dat_1_)
     y_pred_2 = predict_labels(weights[2], dat_2_)
+    
     
     #replacing the prediction in fornt of the original idx
     pred[inds_0] = y_pred_0
@@ -549,8 +559,8 @@ def pred_jet_num4(weights, degree, tx_test):
     dat_2 = cols_log_transform(dat_2)
     dat_3 = cols_log_transform(dat_3)
 
-    """we don't have the same shape because of jet_num removal
-    instead of (shape-1)*deg + 2 -> shape*deg +1"""
+    #we don't have the same shape because of jet_num removal
+    #instead of (shape-1)*deg + 2 -> shape*deg +1
     dat_0_ = np.zeros([dat_0.shape[0], (dat_0.shape[1])*degree[0] +1])
     dat_1_ = np.zeros([dat_1.shape[0], (dat_1.shape[1])*degree[1] +1])
     dat_2_ = np.zeros([dat_2.shape[0], (dat_2.shape[1])*degree[2] +1])
@@ -582,6 +592,7 @@ def pred_jet_num4(weights, degree, tx_test):
     dat_1_ = drop_nan_col(dat_1_)
     dat_2_ = drop_nan_col(dat_2_)
     dat_3_ = drop_nan_col(dat_3_)
+    
     
     y_pred_0 = predict_labels(weights[0], dat_0_)
     y_pred_1 = predict_labels(weights[1], dat_1_)
