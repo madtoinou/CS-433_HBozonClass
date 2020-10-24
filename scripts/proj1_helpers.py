@@ -110,9 +110,9 @@ def standardize_matrix(tx, mean=[], std=[]):
 
 def drop_nan_col(tx):
     """
-    Remove the columns containing only NaN values from the matrix
+    Remove the columns containing only NaN values or 0 from the matrix
     """
-    nan_cols = np.all(np.isnan(tx), axis=0)
+    nan_cols = np.all(np.isnan(tx) | np.isclose(tx, 10**-8), axis=0)
     tx = tx[:,~nan_cols]
     return tx
 
@@ -125,21 +125,20 @@ def nan_to_median(tx):
     
     return tx
             
-def preprocessing(dat_i, degree, mean=[], std=[]):
+def preprocessing(dat_i, degree, kept_cols, mean=[], std=[]):
     """
     """
-    
     #preallocate the array
-    dat_f = np.zeros([dat_i.shape[0], (dat_i.shape[1])*degree +1])
+    dat_f = np.zeros([dat_i.shape[0], (len(kept_cols))*degree +1])
     
     #change the -999 to nan to exclude them from std, mean and median calculations
     dat_i[dat_i == -999] = np.nan
 
     ##log-transform predetermined features
-    dat_tmp = cols_log_transform(dat_i)
-    
+    dat_f = cols_log_transform(dat_i)
+        
     #augment the features matrix using a polynomial basis
-    dat_tmp = build_poly(dat_tmp,degree)
+    dat_f = build_poly(dat_f,degree)
 
     #standardize the features matrix (except the constant from build_poly)
     dat_f[:,1:], mean, std = standardize_matrix(dat_f[:,1:], mean, std)
@@ -149,5 +148,8 @@ def preprocessing(dat_i, degree, mean=[], std=[]):
     
     #change the nan values to the median of the column
     dat_f = nan_to_median(dat_f)
+    
+    #temporaire -> virer certaines colonnes, à remonter avant le cols_log_transform
+    dat_f[:,:len(kept_cols)] = dat_f[:,kept_cols]
 
     return dat_f, mean, std

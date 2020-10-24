@@ -141,17 +141,17 @@ def build_poly(x, degree):
 def least_squares(y, tx):
     """calculate the least squares solution using normal equations."""
     #version original
-    #A = tx.T @ tx + 10**-10 * diag
-    #b = tx.T @ y
-    #weights_opt = np.linalg.solve(A, b)
-    #mse = compute_mse(y, tx, weights_opt) 
-    
-    #avoid the sigular matrices
-    diag = np.eye(tx.shape[1])
-    A = tx.T @ tx +10**-40 * diag
+    A = tx.T @ tx
     b = tx.T @ y
     weights_opt = np.linalg.solve(A, b)
     mse = compute_mse(y, tx, weights_opt) 
+    
+    #avoid the sigular matrices
+    #diag = np.eye(tx.shape[1])
+    #A = tx.T @ tx +10**-40 * diag
+    #b = tx.T @ y
+    #weights_opt = np.linalg.solve(A, b)
+    #mse = compute_mse(y, tx, weights_opt) 
     
     return weights_opt, mse
 
