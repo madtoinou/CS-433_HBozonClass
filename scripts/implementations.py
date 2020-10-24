@@ -658,12 +658,13 @@ def preproc_3split(y,tX):
     dat_0_ = nan_to_medi(dat_0_)
     dat_1_ = nan_to_medi(dat_1_)
     dat_2_ = nan_to_medi(dat_2_)
-
+    
     #remove column with nan
     dat_0_ = drop_nan_col(dat_0_)
     dat_1_ = drop_nan_col(dat_1_)
     dat_2_ = drop_nan_col(dat_2_)
-    return dat_0_, dat_1_, dat_2_
+
+    return pred_0, pred_1, pred_2, dat_0_, dat_1_, dat_2_, inds_0, inds_1, inds_2
 
 def preproc_4split(y,tX):
     # --- PREPROCESSING FOR HYPERPARAMETER OPTIMIZATION 4 SPLITS---
@@ -721,4 +722,4 @@ def preproc_4split(y,tX):
     dat_1_ = drop_nan_col(dat_1_)
     dat_2_ = drop_nan_col(dat_2_)
     dat_3_ = drop_nan_col(dat_3_)
-    return dat_0_, dat_1_, dat_2_, dat_3_
+    return pred_0, pred_1, pred_2, pred_3, dat_0_, dat_1_, dat_2_, dat_3_, inds_0, inds_1, inds_2, inds_3
