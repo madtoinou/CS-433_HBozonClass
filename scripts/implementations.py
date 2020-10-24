@@ -527,7 +527,7 @@ def pred_jet_num(weights, degree, tx_test):
     #prediction array
     pred = np.zeros(tx_test.shape[0])
     
-    _, _, _, dat_0_, dat_1_, dat_2_, inds_0, inds_1, inds_2 = preproc_3split(pred,tx_test)
+    _, _, _, dat_0_, dat_1_, dat_2_, inds_0, inds_1, inds_2 = preproc_3split(pred,tx_test,degree)
     
     y_pred_0 = predict_labels(weights[0], dat_0_)
     y_pred_1 = predict_labels(weights[1], dat_1_)
@@ -630,7 +630,7 @@ def check_correlation(tX):
                     plt.show()
         a = []
         
-def preproc_3split(y,tX):
+def preproc_3split(y,tX, degree):
     # --- PREPROCESSING FOR HYPERPARAMETER OPTIMIZATION 3 SPLITS ---
     #putting jet_num in the last column
     tX[tX == -999] = np.nan
@@ -646,19 +646,15 @@ def preproc_3split(y,tX):
     dat_1 = cols_log_transform(dat_1)
     dat_2 = cols_log_transform(dat_2)
 
-    deg_0 = 3
-    deg_1 = 4
-    deg_2 = 6
-
     """we don't have the same shape because of jet_num removal
     instead of (shape-1)*deg + 2 -> shape*deg +1"""
-    dat_0_ = np.zeros([dat_0.shape[0], (dat_0.shape[1])*deg_0 +1])
-    dat_1_ = np.zeros([dat_1.shape[0], (dat_1.shape[1])*deg_1 +1])
-    dat_2_ = np.zeros([dat_2.shape[0], (dat_2.shape[1])*deg_2 +1])
+    dat_0_ = np.zeros([dat_0.shape[0], (dat_0.shape[1])*degree[0] +1])
+    dat_1_ = np.zeros([dat_1.shape[0], (dat_1.shape[1])*degree[1] +1])
+    dat_2_ = np.zeros([dat_2.shape[0], (dat_2.shape[1])*degree[2] +1])
 
-    dat_0_ = build_poly(dat_0,deg_0)
-    dat_1_ = build_poly(dat_1,deg_1)
-    dat_2_ = build_poly(dat_2,deg_2)
+    dat_0_ = build_poly(dat_0,degree[0])
+    dat_1_ = build_poly(dat_1,degree[1])
+    dat_2_ = build_poly(dat_2,degree[2])
 
     #we don't standardize the first column because its the constant
     #introduced by the build_poly
@@ -677,7 +673,7 @@ def preproc_3split(y,tX):
 
     return pred_0, pred_1, pred_2, dat_0_, dat_1_, dat_2_, inds_0, inds_1, inds_2
 
-def preproc_4split(y,tX):
+def preproc_4split(y,tX,degree=[3,4,3,5]):
     # --- PREPROCESSING FOR HYPERPARAMETER OPTIMIZATION 4 SPLITS---
     #putting jet_num in the last column
     tX[tX == -999] = np.nan
@@ -694,24 +690,19 @@ def preproc_4split(y,tX):
     dat_2 = cols_log_transform(dat_2)
     dat_3 = cols_log_transform(dat_3)
 
-    deg_0 = 3
-    deg_1 = 4
-    deg_2 = 3
-    deg_3 = 5
-
 
     """we don't have the same shape because of jet_num removal
     instead of (shape-1)*deg + 2 -> shape*deg +1"""
-    dat_0_ = np.zeros([dat_0.shape[0], (dat_0.shape[1])*deg_0 +1])
-    dat_1_ = np.zeros([dat_1.shape[0], (dat_1.shape[1])*deg_1 +1])
-    dat_2_ = np.zeros([dat_2.shape[0], (dat_2.shape[1])*deg_2 +1])
-    dat_3_ = np.zeros([dat_3.shape[0], (dat_3.shape[1])*deg_3 +1])
+    dat_0_ = np.zeros([dat_0.shape[0], (dat_0.shape[1])*degree[0] +1])
+    dat_1_ = np.zeros([dat_1.shape[0], (dat_1.shape[1])*degree[1] +1])
+    dat_2_ = np.zeros([dat_2.shape[0], (dat_2.shape[1])*degree[2] +1])
+    dat_3_ = np.zeros([dat_3.shape[0], (dat_3.shape[1])*degree[3] +1])
 
 
-    dat_0_ = build_poly(dat_0,deg_0)
-    dat_1_ = build_poly(dat_1,deg_1)
-    dat_2_ = build_poly(dat_2,deg_2)
-    dat_3_ = build_poly(dat_3,deg_3)
+    dat_0_ = build_poly(dat_0,degree[0])
+    dat_1_ = build_poly(dat_1,degree[1])
+    dat_2_ = build_poly(dat_2,degree[2])
+    dat_3_ = build_poly(dat_3,degree[3])
 
 
     #we don't standardize the first column because its the constant
