@@ -101,13 +101,9 @@ def drop_nan_col(tx):
     """
     Remove the columns containing only NaN values from the matrix
     """
-    col_median = np.nanmean(tx, axis=0)
-    idx_col_nan = np.where(np.isnan(col_median))[0]
-    
-    #extract non nan columns
-    idx_col = list(set([col_i for col_i in range(tx.shape[1])])-set(idx_col_nan))
-    
-    return tx[:,idx_col]
+    nan_cols = np.all(np.isnan(tx), axis=0)
+    tx = tx[:,~nan_cols]
+    return tx
 
 def nan_to_median(tx):
     '''Set NaN values to the value of the mean for each feature'''
