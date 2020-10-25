@@ -134,9 +134,6 @@ def preprocessing(dat_i, degree, kept_cols=[], mean=[], std=[], cols_idx=[0,2,3,
     
     #change the -999 to nan to exclude them from std, mean and median calculations
     dat_i[dat_i == -999] = np.nan
-    
-    #remove column containing only nans and zeros
-    dat_f = drop_nan_col(dat_f)
 
     ##log-transform predetermined features
     dat_f = cols_log_transform(dat_i,cols_idx)
