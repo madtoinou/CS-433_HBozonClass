@@ -71,13 +71,13 @@ def split_jet_num(y, tx):
 
     return y_0, y_1, y_2, tx_0, tx_1, tx_2, idx_0, idx_1, idx_2
 
-def cols_log_transform(tx):
+def cols_log_transform(tx, cols_idx=[0,2,3,5,8,9,10,13,16,19,21,22,23]):
     """Apply transformation, depending on the 
        type of distribution"""
     
     #list of identified features that would benefit a log-transform
-    cols_idx = [3,8,9,13,16,19,22]
-    
+    #22 correspong to PRE_tau_pt (swapped with jet_num)
+    # [3,8,9,13,16,19,22]
     # transform the features with logarithm
     tx[:, cols_idx] = np.log(1+tx[:, cols_idx])
 
@@ -99,12 +99,12 @@ def standardize_matrix(tx, mean=[], std=[]):
         # shift standard deviation to 1
         tx[:, std_col > 0] = tx[:, std_col > 0] / std_col[std_col > 0]
         return tx, nan_mean, std_col
-    #knwon params
+    #known params
     else:
-        #shift mean
+        #shift using training mean
         tx = tx - mean
 
-        # shift standard deviation to 1
+        # shift using training standard deviation
         tx[:, std > 0] = tx[:, std > 0] / std[std > 0]
         return tx, mean, std
 
@@ -125,9 +125,10 @@ def nan_to_median(tx):
     
     return tx
             
-def preprocessing(dat_i, degree, kept_cols, mean=[], std=[]):
+def preprocessing(dat_i, degree, kept_cols=[], mean=[], std=[], cols_idx=[0,2,3,5,8,9,10,13,16,19,21,22,23]):
     """
     """
+    
     #preallocate the array
     dat_f = np.zeros([dat_i.shape[0], (len(kept_cols))*degree +1])
     
@@ -135,13 +136,13 @@ def preprocessing(dat_i, degree, kept_cols, mean=[], std=[]):
     dat_i[dat_i == -999] = np.nan
 
     ##log-transform predetermined features
-    dat_f = cols_log_transform(dat_i)
+    dat_f = cols_log_transform(dat_i,cols_idx)
         
     #augment the features matrix using a polynomial basis
     dat_f = build_poly(dat_f,degree)
 
     #standardize the features matrix (except the constant from build_poly)
-    dat_f[:,1:], mean, std = standardize_matrix(dat_f[:,1:], mean, std)
+    dat_f[:,1:], mean, std = standardize_matrix(dat_f[:,1:], mean=mean, std=std)
 
     #remove column containing only nans
     dat_f = drop_nan_col(dat_f)
@@ -149,7 +150,8 @@ def preprocessing(dat_i, degree, kept_cols, mean=[], std=[]):
     #change the nan values to the median of the column
     dat_f = nan_to_median(dat_f)
     
-    #temporaire -> virer certaines colonnes, à remonter avant le cols_log_transform
-    dat_f[:,:len(kept_cols)] = dat_f[:,kept_cols]
+    if len(kept_cols) != 0:
+        #temporaire -> virer certaines colonnes, à remonter avant le cols_log_transform
+        dat_f[:,:len(kept_cols)] = dat_f[:,kept_cols]
 
     return dat_f, mean, std
