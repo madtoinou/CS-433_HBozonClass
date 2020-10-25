@@ -1,6 +1,5 @@
 import numpy as np
-from proj1_helpers import *
-from implementations import ridge_regression
+from implementations import *
 
 # hyperparameters
 lambdas =  [2.04*10**-7, 4.89*10**-11, 3.86*10**-9]

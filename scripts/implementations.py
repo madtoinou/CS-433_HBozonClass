@@ -1,7 +1,140 @@
 # -*- coding: utf-8 -*-
+"""All the implementations"""
 
 import numpy as np
-from proj1_helpers import *
+import csv
+
+"""IMPLEMENTATIONS"""
+
+def gradient_descent(y, tx, initial_w, max_iters, gamma):
+    """Gradient descent algorithm.
+       Return the updated loss and weights."""
+    
+    w = initial_w
+    
+    for n_iter in range(max_iters):
+        error, gradient = compute_gradient(y, tx, w)
+        loss = compute_loss(y, tx, w)
+        w = w - gamma*gradient
+    
+    return w, loss
+
+
+def stochastic_gradient_descent(y, tx, initial_w, batch_size, max_iters, gamma):
+    """Stochastic gradient descent algorithm.
+       Return the updated loss and weights."""
+    
+    w = initial_w
+
+    for minibatch_y, minibatch_tx in batch_iter(y, tx, batch_size):
+        for n_iter in range(max_iters):
+            error, gradient = compute_stoch_gradient(minibatch_y, minibatch_tx, w)
+            loss = compute_loss(minibatch_y, minibatch_tx, w)
+            w = w - gamma*gradient
+    
+    return w, loss
+
+
+def least_squares(y, tx):
+    """Calculate the least squares solution using normal equations.
+       Returns the loss and weights."""
+    
+    #version original
+    A = tx.T @ tx
+    b = tx.T @ y
+    w = np.linalg.solve(A, b)
+    loss = compute_mse(y, tx, w)  
+    
+    return w, loss
+
+
+def ridge_regression(y, tx, lambda_):
+    """Calculate the ridge regression solution using normal equations.
+       Returns the loss and weights."""
+    
+    diag = np.eye(tx.shape[1])
+    cte = 2*tx.shape[0] 
+    A = tx.T @ tx + lambda_ * cte * diag
+    b = tx.T @ y
+    w = np.linalg.solve(A, b)
+    loss = compute_mse(y, tx, w)
+    
+    return w, loss
+
+
+def learning_by_gradient_descent(y, tx, w, gamma):
+    """
+    Do one step of gradient descent using logistic regression.
+    Return the updated loss and weights.
+    """
+
+    loss = compute_log_loss(y, tx, w)
+    grad = calculate_gradient(y, tx, w)
+    w = w - gamma*grad
+    
+    return w, loss
+
+
+def learning_by_penalized_gradient(y, tx, w, gamma, lambda_):
+    """
+    Do one step of gradient descent, using the penalized logistic regression.
+    Return the updated loss and weights.
+    """
+
+    loss, grad, hess = penalized_logistic_regression(y, tx, w, lambda_)
+    w -= gamma*(np.linalg.inv(hess) @ grad)
+    
+    return w, loss
+
+
+"""UTILITARIES"""
+
+
+def load_csv_data(data_path, sub_sample=False):
+    """Loads data and returns y (class labels), tX (features) and ids (event ids)"""
+    y = np.genfromtxt(data_path, delimiter=",", skip_header=1, dtype=str, usecols=1)
+    x = np.genfromtxt(data_path, delimiter=",", skip_header=1)
+    ids = x[:, 0].astype(np.int)
+    input_data = x[:, 2:]
+
+    # convert class labels from strings to binary (-1,1)
+    yb = np.ones(len(y))
+    yb[np.where(y=='b')] = -1
+    
+    # sub-sample
+    if sub_sample:
+        yb = yb[::50]
+        input_data = input_data[::50]
+        ids = ids[::50]
+
+    return yb, input_data, ids
+
+
+
+def predict_labels(weights, data):
+    """Generates class predictions given weights, and a test data matrix"""
+    y_pred = np.dot(data, weights)
+    y_pred[np.where(y_pred <= 0)] = -1
+    y_pred[np.where(y_pred > 0)] = 1
+    
+    return y_pred
+
+
+
+def create_csv_submission(ids, y_pred, name):
+    """
+    Creates an output file in csv format for submission to kaggle
+    Arguments: ids (event ids associated with each prediction)
+               y_pred (predicted class labels)
+               name (string name of .csv output file to be created)
+    """
+    with open(name, 'w') as csvfile:
+        fieldnames = ['Id', 'Prediction']
+        writer = csv.DictWriter(csvfile, delimiter=",", fieldnames=fieldnames)
+        writer.writeheader()
+        for r1, r2 in zip(ids, y_pred):
+            writer.writerow({'Id':int(r1),'Prediction':int(r2)})
+            
 
 
 def compute_mse(y, tx, w):
@@ -16,7 +149,7 @@ def compute_mse(y, tx, w):
 
 
 
-def compute_loss_MAE(y, tx, w):
+def compute_mae(y, tx, w):
     """Calculate the loss using mae"""
 
     losses = np.empty((y.shape))
@@ -41,7 +174,7 @@ def compute_gradient(y, tx, w):
 
 
 def compute_stoch_gradient(y, tx, w):
-    """Compute a stochastic gradient from just few examples n and their corresponding y_n labels."""
+    """Compute a stochastic gradient from just few examples n and their corresponding y_n          labels."""
     
     gradient = np.empty((y.shape))
     error = y - np.dot(tx,w)
@@ -62,32 +195,12 @@ def compute_subgradient(y, tx, w):
 
 
 
-def gradient_descent(y, tx, initial_w, max_iters, gamma):
-    """Gradient descent algorithm."""
-    
-    # Define parameters to store w and loss
-    ws = [initial_w]
-    losses = []
-    w = initial_w
-    
-    for n_iter in range(max_iters):
-        error, gradient = compute_gradient(y, tx, w) # Problem if we use (2,1), use (2,)!!!!!!!!!!
-        loss = compute_loss(y, tx, w)
-        w = w - gamma*gradient
-        ws.append(w)
-        losses.append(loss)
-    #print("min_loss={l}, w_optimal={w}".format(l=loss, w=w))
-    
-    return losses[-1], ws[-1]
-
-
-
 def batch_iter(y, tx, batch_size, num_batches=1, shuffle=True):
     """
     Generate a minibatch iterator for a dataset.
-    Takes as input two iterables (here the output desired values 'y' and the input data 'tx')
-    Outputs an iterator which gives mini-batches of `batch_size` matching elements from `y` and `tx`.
-    Data can be randomly shuffled to avoid ordering in the original data messing with the randomness of the minibatches.
+    Takes as input two iterables (here the output desired values 'y' and the input data        'tx')
+    Outputs an iterator which gives mini-batches of `batch_size` matching elements from `y`     and `tx`.
+    Data can be randomly shuffled to avoid ordering in the original data messing with the       randomness of the minibatches.
     Example of use :
     for minibatch_y, minibatch_tx in batch_iter(y, tx, 32):
         <DO-SOMETHING>
@@ -107,120 +220,8 @@ def batch_iter(y, tx, batch_size, num_batches=1, shuffle=True):
         if start_index != end_index:
             yield shuffled_y[start_index:end_index], shuffled_tx[start_index:end_index]
 
-
             
-def stochastic_gradient_descent(y, tx, initial_w, batch_size, max_iters, gamma):
-    """Stochastic gradient descent algorithm."""
-    
-    ws = [initial_w]
-    losses = []
-    w = initial_w
-
-    for minibatch_y, minibatch_tx in batch_iter(y, tx, batch_size):
-        for n_iter in range(max_iters):
-            error, gradient = compute_stoch_gradient(minibatch_y, minibatch_tx, w)
-            loss = compute_loss(minibatch_y, minibatch_tx, w)
-            w = w - gamma*gradient
-            ws.append(w)
-            losses.append(loss)
-    #print("min_loss={l}, w_optimal={w}".format(l=loss, w=w))
-    
-    return losses[-1], ws[-1]
-
-
-
-def build_poly(x, degree):
-    """polynomial basis functions for input data x, for j=0 up to j=degree."""
-    poly = np.ones((len(x), 1))
-    for deg in range(1, degree+1):
-        poly = np.c_[poly, np.power(x, deg)]
-    return poly
-
-
-
-def least_squares(y, tx):
-    """calculate the least squares solution using normal equations."""
-    #version original
-    A = tx.T @ tx
-    b = tx.T @ y
-    weights_opt = np.linalg.solve(A, b)
-    mse = compute_mse(y, tx, weights_opt) 
-    
-    #avoid the sigular matrices
-    #diag = np.eye(tx.shape[1])
-    #A = tx.T @ tx +10**-40 * diag
-    #b = tx.T @ y
-    #weights_opt = np.linalg.solve(A, b)
-    #mse = compute_mse(y, tx, weights_opt) 
-    
-    return weights_opt, mse
-
-
-
-def ridge_regression(y, tx, lambda_):
-    """implement ridge regression using normal equations."""
-    
-    diag = np.eye(tx.shape[1])
-    cte = 2*tx.shape[0] 
-    A = tx.T @ tx + lambda_ * cte * diag
-    b = tx.T @ y
-    weights_opt = np.linalg.solve(A, b)
-    mse = compute_mse(y, tx, weights_opt)
-    
-    return weights_opt, mse
-
-
-def split_data(x, y, ratio, seed):
-    """
-    split the dataset based on the split ratio. If ratio is 0.8 
-    you will have 80% of your data set dedicated to training 
-    and the rest dedicated to testing
-    """
-    # set seed
-    np.random.seed(seed)
-    sp = int(ratio * x.shape[0])
-    train_ind = np.random.permutation(np.arange(x.shape[0]))[:sp]
-    test_ind = np.random.permutation(np.arange(x.shape[0]))[sp:]
-
-    x_train = x[train_ind]
-    x_test = x[test_ind]
-    y_train = y[train_ind]
-    y_test = y[test_ind]
-    return x_train, x_test, y_train, y_test
-
-
-
-def build_k_indices(y, k_fold, seed):
-    """build k indices for k-fold."""
-    
-    num_row = y.shape[0]
-    interval = int(num_row / k_fold)
-    np.random.seed(seed)
-    indices = np.random.permutation(num_row)
-    k_indices = [indices[k * interval: (k + 1) * interval]
-                 for k in range(k_fold)]
-    
-    return np.array(k_indices)
-
-
-"""
-def cross_validation(y, x, k_indices, k, lambda_, degree):
-    #return the loss of ridge regression.
-    
-    x_test = x[k_indices[k]]
-    y_test = y[k_indices[k]]
-    x_train = x[np.concatenate(([x_train for i,x_train in enumerate(k_indices) if i!=k]), axis=0)]
-    y_train = y[np.concatenate(([y_train for i,y_train in enumerate(k_indices) if i!=k]), axis=0)]
-    phi_tr = build_poly(x_train, degree)
-    phi_te = build_poly(x_test, degree)
-    mse, w = ridge_regression(y_train, phi_tr, lambda_)
-    loss_tr = np.sqrt(2*compute_mse(y_train,phi_tr,w))
-    loss_te = np.sqrt(2*compute_mse(y_test,phi_te,w))
-    
-    return loss_tr, loss_te, w
-"""
-
-
+            
 def sigmoid(t):
     """apply sigmoid function on t."""
 
@@ -229,10 +230,10 @@ def sigmoid(t):
 
 
 
-def calculate_loss(y, tx, w):
+def compute_log_loss(y, tx, w):
     """compute the cost by negative log likelihood."""
     pred = sigmoid(tx.dot(w))
-    loss = y.T.dot(np.log(pred+10**-5)) + (1 - y).T.dot(np.log(1-pred+10**-5))
+    loss = y.T.dot(np.log(pred)) + (1 - y).T.dot(np.log(1-pred))
     return np.squeeze(- loss)
 
 
@@ -245,17 +246,6 @@ def calculate_gradient(y, tx, w):
     return grad
 
 
-def learning_by_gradient_descent(y, tx, w, gamma):
-    """
-    Do one step of gradient descent using logistic regression.
-    Return the loss and the updated w.
-    """
-
-    loss = calculate_loss(y, tx, w)
-    grad = calculate_gradient(y, tx, w)
-    w = w - gamma*grad
-    
-    return loss, w
 
 def learning_by_gradient_descent_stoch(y, tx, w, gamma):
     """
@@ -263,11 +253,11 @@ def learning_by_gradient_descent_stoch(y, tx, w, gamma):
     Return the loss and the updated w.
     """
 
-    loss = calculate_loss(y, tx, w)
+    loss = compute_log_loss(y, tx, w)
     grad = calculate_gradient(y, tx, w)
     w -= gamma*grad
     
-    return loss, w
+    return w, loss
 
 
 
@@ -288,7 +278,7 @@ def calculate_hessian(y, tx, w):
 def logistic_regression(y, tx, w):
     """return the loss, gradient, and hessian."""
 
-    loss = calculate_loss(y, tx, w)/tx.shape[0]
+    loss = compute_log_loss(y, tx, w)/tx.shape[0]
     grad = calculate_gradient(y, tx, w)/tx.shape[0]
     hess = calculate_hessian(y, tx, w)/tx.shape[0]
     
@@ -297,10 +287,8 @@ def logistic_regression(y, tx, w):
 
 
 def learning_by_newton_method(y, tx, w, gamma):   #Add gamma or not?
-    """
-    Do one step on Newton's method.
-    return the loss and updated w.
-    """
+    """ Do one step on Newton's method.
+        return the loss and updated w."""
 
     loss, grad, hess = logistic_regression(y, tx, w)
     w -= gamma*(np.linalg.inv(hess) @ grad)
@@ -313,209 +301,166 @@ def penalized_logistic_regression(y, tx, w, lambda_):
     """return the loss and gradient."""
 
     reg_param = (lambda_ / 2)*(w.T @ w)
-    loss = calculate_loss(y, tx, w) + reg_param
+    loss = compute_log_loss(y, tx, w) + reg_param
     grad = calculate_gradient(y, tx, w) + lambda_* w
-    #lambdas = np.zeros((w.shape[0],w.shape[0]))
-    #np.fill_diagonal(lambdas, lambda_)
-    #hess = calculate_hessian(y, tx, w) + lambdas
+    lambdas = np.zeros((w.shape[0],w.shape[0]))
+    np.fill_diagonal(lambdas, lambda_)
+    hess = calculate_hessian(y, tx, w) + lambdas
     
-    return loss, grad               # Possible to add hessian calculation but for now it is too costly in memory
+    return loss, grad, hess       
+            
 
-
-def learning_by_penalized_gradient(y, tx, w, gamma, lambda_):
+"""PREPROCESSING"""    
+    
+    
+def split_jet_num(y, tx):
     """
-    Do one step of gradient descent, using the penalized logistic regression.
-    Return the loss and updated w.
-    """
-
-    loss, grad = penalized_logistic_regression(y, tx, w, lambda_)    # Don't forget to add hess if needed
-    w -= gamma*(np.linalg.inv(hess) @ grad)
+    jet_num distribution constrain heavily the model by acting as a categorical data, we       decide to try to split
+    the model into submodels based on this feature
+    /!\ jet_num needs to be the last column"""
     
-    return loss, w
-
-# -*- coding: utf-8 -*-
-"""Implemented functions for preprocessing steps"""
-
-import numpy as np
-
-def clean_data(tX):
-    '''Set NaN values to the value
-       of the mean for each feature'''
+    #jet_num == 0
+    idx_0 = np.nonzero(tx[:, -1] == 0)[0]
+    tx_0  = tx[idx_0, :-1]
+    y_0   = y[idx_0]
     
-    tX[tX <= -999] = np.nan
-    col_mean = np.nanmean(tX, axis=0)
-    inds = np.where(np.isnan(tX))
-    tX[inds] = np.take(col_mean, inds[1])
+    #jet_num == 1
+    idx_1 = np.nonzero(tx[:, -1] == 1)[0]
+    tx_1  = tx[idx_1, :-1]
+    y_1   = y[idx_1]
     
-    return tX
+    #jet_num == 2 or 3
+    idx_2 = np.nonzero(tx[:, -1] > 1)[0]
+    tx_2  = tx[idx_2, :-1]
+    y_2   = y[idx_2]
+
+    return y_0, y_1, y_2, tx_0, tx_1, tx_2, idx_0, idx_1, idx_2
 
 
-def log_transform(tX):
-    """Perform logarithmic function on data, 
-       useful for skewed distributions"""
-    
-    return np.log(1+tX)
 
-def normalize_data_minmax(tX):
-    """Perform normalization of data"""
-    
-    #temp_mean = []
-    #temp_min_max = []
-    
-    for i in range(tX.shape[1]):
-        #temp_mean.append(np.mean(tX[:,i]))
-        #temp_min_max.append((np.max(tX[:,i]) - np.min(tX[:,i])))
-        tX[:,i] = tX[:,i] - np.mean(tX[:,i])
-        tX[:,i] = tX[:,i] / (np.max(tX[:,i]) - np.min(tX[:,i]))
-    
-    #tX[:,22] = temp_min_max[22]*tX[:,22]
-    #tX[:,22] += temp_mean[22]
-    
-    return tX
-
-def normalize_data_std(tX):
-    """Standardize along features axis, implemented to ignore jet_num features."""
-    #Mean = 0
-    tX = tX - np.nanmean(tX, axis=0)
-    #STD feature-wise
-    std_col = np.nanstd(tX, axis=0)
-    #Std = 1
-    tX[:, std_col > 0] = tX[:, std_col > 0] / std_col[std_col > 0]
-    return tX
-
-def cols_log_transform(tX):
+def cols_log_transform(tx, cols_idx=[0,2,3,5,8,9,10,13,16,19,21,22,23]):
     """Apply transformation, depending on the 
        type of distribution"""
     
+    #list of identified features that would benefit a log-transform
+    #22 correspong to PRE_tau_pt (swapped with jet_num)
+    # [0,2,3,5,8,9,10,13,16,19,21,22,23]
     # transform the features with logarithm
-    list_1 = [3,8,9,22,16,19,13]
-    tX[:, list_1] = np.log(1+tX[:, list_1])
+    tx[:, cols_idx] = np.log(1+tx[:, cols_idx])
 
-    return tX
+    return tx
 
-def nan_to_mean(x):
+
+
+def standardize_matrix(tx, mean=[], std=[]):
+    """
+    Standardize along features axis and stores mean and std.
+    """
+    #no exsiting params
+    if len(mean) == 0 and len(std) ==0:
+        #shift mean
+        nan_mean = np.nanmean(tx, axis=0)
+        tx = tx - nan_mean
+
+        #STD feature-wise
+        std_col = np.nanstd(tx, axis=0)
+
+        # shift standard deviation to 1
+        tx[:, std_col > 0] = tx[:, std_col > 0] / std_col[std_col > 0]
+        return tx, nan_mean, std_col
+    #known params
+    else:
+        #shift using training mean
+        tx = tx - mean
+
+        # shift using training standard deviation
+        tx[:, std > 0] = tx[:, std > 0] / std[std > 0]
+        
+        return tx, mean, std
+
+    
+    
+def drop_nan_col(tx):
+    """
+    Remove the columns containing only NaN values or 0 from the matrix
+    """
+    
+    nan_cols = np.all(np.isnan(tx) | np.isclose(tx, 10**-8), axis=0)
+    tx = tx[:,~nan_cols]
+    
+    return tx
+
+
+
+def nan_to_median(tx):
     '''Set NaN values to the value of the mean for each feature'''
     
-    x[x == -999] = np.nan
-    col_mean = np.nanmean(x, axis=0)
-    inds = np.where(np.isnan(x))
-    x[inds] = np.take(col_mean, inds[1])
+    col_median = np.nanmedian(tx, axis=0)
+    idx = np.where(np.isnan(tx))
+    tx[idx] = np.take(col_median, idx[1])
     
-    #if columns of nan, replace them by 0
-    #x[np.isnan(x)] =0
-    return x
+    return tx
+            
+    
 
-def nan_to_zero(x):
-    '''Set NaN values to the value of the mean for each feature'''
+def preprocessing(dat_i, degree, kept_cols=[], mean=[], std=[], cols_idx=[0,2,3,5,8,9,10,13,16,19,21,22,23]):
+    """Receives the features to preprocess and perform log-transform
+       polynomial augmentation, standardization and remove columns
+       of nans and zeros
+    """
     
-    x[x == -999] = np.nan
-    x[np.isnan(x)] = 0    
-    return x
+    #preallocate the array
+    dat_f = np.zeros([dat_i.shape[0], (len(kept_cols))*degree +1])
+    
+    #change the -999 to nan to exclude them from std, mean and median calculations
+    dat_i[dat_i == -999] = np.nan
 
-def nan_to_medi(x):
-    '''Set NaN values to the value of the mean for each feature'''
-    
-    x[x == -999] = np.nan
-    col_median = np.nanmedian(x, axis=0)
-    inds = np.where(np.isnan(x))
-    x[inds] = np.take(col_median, inds[1])
-    
-    #if columns of nan, replace them by 0
-    #x[np.isnan(x)] =0
-    return x
+    ##log-transform predetermined features
+    dat_f = cols_log_transform(dat_i,cols_idx)
+        
+    #augment the features matrix using a polynomial basis
+    dat_f = build_poly(dat_f,degree)
 
-def drop_nan_col(x):
-    col_median = np.nanmean(x, axis=0)
-    idx_col_nan = np.where(np.isnan(col_median))[0]
-    #non nan cols
-    idx_col = list(set([col_i for col_i in range(x.shape[1])])-set(idx_col_nan))
-    return x[:,idx_col]
+    #standardize the features matrix (except the constant from build_poly)
+    dat_f[:,1:], mean, std = standardize_matrix(dat_f[:,1:], mean=mean, std=std)
+    
+    #change the nan values to the median of the column
+    dat_f = nan_to_median(dat_f)
+    
+    if len(kept_cols) != 0:
+        #temporaire -> virer certaines colonnes, à remonter avant le cols_log_transform
+        dat_f[:,:len(kept_cols)] = dat_f[:,kept_cols]
+        
+    #remove column containing only nans and zeros
+    dat_f = drop_nan_col(dat_f)
 
-def split_jet_num(prediction, data):
-    """jet_num distribution constrain heavily the model by acting as a categorical data, we decide to try to split
-    the model into submodels based on this feature
-    /!\ jet_num needs to be the last column"""
-    
-    inds_0 = np.nonzero(data[:, -1] == 0)[0]
-    dat_0 = data[inds_0, :-1]
-    pred_0 = prediction[inds_0]
-
-    inds_1 = np.nonzero(data[:, -1] == 1)[0]
-    dat_1 = data[inds_1, :-1]
-    pred_1 = prediction[inds_1]
-    
-    #jet_num = 2 or 3
-    inds_2 = np.nonzero(data[:, -1] > 1)[0]
-    dat_2 = data[inds_2, :-1]
-    pred_2 = prediction[inds_2]
-
-    return pred_0, pred_1, pred_2, dat_0, dat_1, dat_2, inds_0, inds_1, inds_2
-
-def split_jet_num4(prediction, data):
-    """jet_num distribution constrain heavily the model by acting as a categorical data, we decide to try to split
-    the model into submodels based on this feature
-    /!\ jet_num needs to be the last column"""
-    
-    inds_0 = np.nonzero(data[:, -1] == 0)[0]
-    dat_0 = data[inds_0, :-1]
-    pred_0 = prediction[inds_0]
-
-    inds_1 = np.nonzero(data[:, -1] == 1)[0]
-    dat_1 = data[inds_1, :-1]
-    pred_1 = prediction[inds_1]
-    
-    #jet_num = 2 or 3
-    inds_2 = np.nonzero(data[:, -1] == 2)[0]
-    dat_2 = data[inds_2, :-1]
-    pred_2 = prediction[inds_2]
-    
-    inds_3 = np.nonzero(data[:, -1] == 3)[0]
-    dat_3 = data[inds_3, :-1]
-    pred_3 = prediction[inds_3]
-
-    return pred_0, pred_1, pred_2, pred_3, dat_0, dat_1, dat_2, dat_3, inds_0, inds_1, inds_2, inds_3
-
-#combine the predictions after the jet_num splitting
-def pred_jet_num(weights, degree, tx_test):
-
-    #prediction array
-    pred = np.zeros(tx_test.shape[0])
-    
-    _, _, _, dat_0_, dat_1_, dat_2_, inds_0, inds_1, inds_2 = preproc_3split(pred,tx_test,degree)
-    
-    y_pred_0 = predict_labels(weights[0], dat_0_)
-    y_pred_1 = predict_labels(weights[1], dat_1_)
-    y_pred_2 = predict_labels(weights[2], dat_2_)
-    
-    
-    #replacing the prediction in fornt of the original idx
-    pred[inds_0] = y_pred_0
-    pred[inds_1] = y_pred_1
-    pred[inds_2] = y_pred_2
-    return pred
+    return dat_f, mean, std
 
 
-def check_correlation(tX):
-    """Study correlation between data
-       Only data with more than 0.9 
-       correlation score are plotted"""
+def build_poly(x, degree):
+    """polynomial basis functions for input data x, for j=0 up to j=degree."""
     
-    a = []
-    temp = 0
-    for i in range(tX.shape[1]):
-        for j in range(tX.shape[1]):
-            print(features_names[i])
-            if i != j:
-                temp = np.corrcoef(tX[:,i],tX[:,j])
-                a.append(temp)
-                if abs(temp[0,1]) > 0.9:
-                    print("Correlation scores for feature {}: ".format(features_names[i+2]))
-                    print(features_names[i+2],features_names[j+2])
-                    print(temp)
-                    u.append(temp)
-                    plt.scatter(tX[:,i],tX[:,j])
-                    plt.show()
-        a = []
+    poly = np.ones((len(x), 1))
+    for deg in range(1, degree+1):
+        poly = np.c_[poly, np.power(x, deg)]
+        
+    return poly
+
+
+
+def build_k_indices(y, k_fold, seed):
+    """build k indices for k-fold."""
+    
+    num_row = y.shape[0]
+    interval = int(num_row / k_fold)
+    np.random.seed(seed)
+    indices = np.random.permutation(num_row)
+    k_indices = [indices[k * interval: (k + 1) * interval]
+                 for k in range(k_fold)]
+    
+    return np.array(k_indices)
+
+
         
 def preprocessing(y,tX, degree):
     # --- PREPROCESSING FOR HYPERPARAMETER OPTIMIZATION 3 SPLITS ---
