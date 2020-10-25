@@ -12,12 +12,17 @@ The  dataset is divided into a training and a testing set composed of 250’000 
 
 ### Model's basic operations
 
-The model implemented in `run.py` loads the training set provided in the DATA_TRAIN_PATH (see Code execution) and several preprocessing steps are performed on this dataset in this order: 1. Splitting of the features based on the PRI_JET_NUM category (0,1 or 2&3), 2. logarithmic transformation of selected features 3. Polynomial augmentation of the features 4. Standardization of the features. 
-Afterwards, the model is trained using the ridge regression algorithm and weights are obtained. These weights are used to predict each labels of the splitted dataset and the predictions are finally merged to create the submission file.
+The model implemented in `run.py` loads the training set provided in the DATA_TRAIN_PATH (see Code execution) and several preprocessing steps are performed on this dataset in this order: 
+1. Splitting of the features based on the PRI_JET_NUM category (0,1 or 2&3)
+2. Logarithmic transformation of selected features 
+3. Polynomial augmentation of the features 
+4. Standardization of the features.
+
+Afterwards, the model is trained using a regularized ridge regression algorithm and weights are obtained. These weights are used to predict each labels of the splitted dataset and the predictions are finally merged to create the submission file.
 
 ### Useful files
 
-The code is separated in 3 distinctive files containing all the functions to reproduce our results:
+The code is separated in 2 distinctive files containing all the functions to reproduce our results:
 
 >1. implementations.py
 >2. run.py
@@ -36,7 +41,7 @@ This file contains all the functions required to reproduce our preprocessing pip
 
 #### run.py:
 
-`run.py` allows to reproduce the best prediction accuracy stated in the report. The optimal hyperparameters are already provided. Function `load_csv_data()` provided by the teachers for loading train set, predict labels and create a submission file in `.csv` format is also given in this file.
+`run.py` allows to reproduce the best prediction accuracy stated in the report. The optimal hyperparameters are already provided. Function `load_csv_data()` provided for loading train set, predict labels and create a submission file in `.csv` format is also given in this file.
 
 
 ### Code execution
