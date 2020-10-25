@@ -4,6 +4,7 @@ from implementations import ridge_regression
 
 # hyperparameters
 lambdas =  [2.04*10**-7, 4.89*10**-11, 3.86*10**-9]
+
 degrees = [6, 5, 4]
 
 #no feature selection
