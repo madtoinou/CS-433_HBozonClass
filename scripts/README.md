@@ -22,7 +22,7 @@ Afterwards, the model is trained using the ridge regression algorithm and weight
 
 ### Useful files
 
-The code is separated in 3 distinctive files containing all the functions to reproduce our results:
+The code is separated in 2 distinctive files containing all the functions to reproduce our results:
 
 >1. implementations.py
 >2. run.py
