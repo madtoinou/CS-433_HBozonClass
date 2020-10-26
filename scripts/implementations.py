@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-from proj1_helpers import *
 
 
 def compute_mse(y, tx, w):
