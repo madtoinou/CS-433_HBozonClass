@@ -6,9 +6,6 @@ lambdas =  [2.04*10**-7, 4.89*10**-11, 3.86*10**-9]
 
 degrees = [6, 5, 4]
 
-#no feature selection
-feats_to_keeps = [[],[],[]]
-
 OUTPUT_PATH = './submission.csv'
 
 #dataset loading
@@ -32,13 +29,13 @@ y_0, y_1, y_2, dat_tr0, dat_tr1, dat_tr2, idx_tr0, idx_tr1, idx_tr2 = split_jet_
 _  , _  , _  , dat_te0, dat_te1, dat_te2, idx_te0, idx_te1, idx_te2 = split_jet_num(pred,tX_test)
 
 #log-transform, augment features using polynomial basis and standardize the subsets individualy
-tx_tr0, tr0_mean, tr0_std = preprocessing(dat_tr0, degrees[0], feats_to_keeps[0])
-tx_tr1, tr1_mean, tr1_std = preprocessing(dat_tr1, degrees[1], feats_to_keeps[1])
-tx_tr2, tr2_mean, tr2_std = preprocessing(dat_tr2, degrees[2], feats_to_keeps[2])
+tx_tr0, tr0_mean, tr0_std = preprocessing(dat_tr0, degrees[0])
+tx_tr1, tr1_mean, tr1_std = preprocessing(dat_tr1, degrees[1])
+tx_tr2, tr2_mean, tr2_std = preprocessing(dat_tr2, degrees[2])
 #using the params identified in the training set
-tx_te0, _, _ = preprocessing(dat_te0, degrees[0], feats_to_keeps[0],mean=tr0_mean, std=tr0_std)
-tx_te1, _, _ = preprocessing(dat_te1, degrees[1], feats_to_keeps[1],mean=tr1_mean, std=tr1_std)
-tx_te2, _, _ = preprocessing(dat_te2, degrees[2], feats_to_keeps[2],mean=tr2_mean, std=tr2_std)
+tx_te0, _, _ = preprocessing(dat_te0, degrees[0],mean=tr0_mean, std=tr0_std)
+tx_te1, _, _ = preprocessing(dat_te1, degrees[1],mean=tr1_mean, std=tr1_std)
+tx_te2, _, _ = preprocessing(dat_te2, degrees[2],mean=tr2_mean, std=tr2_std)
 
 """ * training * """
 

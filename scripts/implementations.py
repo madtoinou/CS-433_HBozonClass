@@ -403,36 +403,35 @@ def nan_to_median(tx):
             
     
 
-def preprocessing(dat_i, degree, kept_cols=[], mean=[], std=[], cols_idx=[0,2,3,5,8,9,10,13,16,19,21,22,23]):
+def preprocessing(dat_i, degree, mean=[], std=[], cols_idx=[0,2,3,5,8,9,10,13,16,19,21,22,23]):
     """Receives the features to preprocess and perform log-transform
        polynomial augmentation, standardization and remove columns
        of nans and zeros
     """
     
     #preallocate the array
-    dat_f = np.zeros([dat_i.shape[0], (len(kept_cols))*degree +1])
+    dat_f = np.zeros([dat_i.shape[0], dat_i.shape[1]*degree +1])
     
     #change the -999 to nan to exclude them from std, mean and median calculations
     dat_i[dat_i == -999] = np.nan
-
+    
     ##log-transform predetermined features
-    dat_f = cols_log_transform(dat_i,cols_idx)
+    dat_i = cols_log_transform(dat_i,cols_idx)
         
     #augment the features matrix using a polynomial basis
-    dat_f = build_poly(dat_f,degree)
+    dat_f = build_poly(dat_i,degree)
+    
+    #remove column containing only nans and zeros
+    dat_f = drop_nan_col(dat_f)
 
     #standardize the features matrix (except the constant from build_poly)
     dat_f[:,1:], mean, std = standardize_matrix(dat_f[:,1:], mean=mean, std=std)
     
-    #change the nan values to the median of the column
-    dat_f = nan_to_median(dat_f)
-    
-    if len(kept_cols) != 0:
-        #temporaire -> virer certaines colonnes, à remonter avant le cols_log_transform
-        dat_f[:,:len(kept_cols)] = dat_f[:,kept_cols]
-        
     #remove column containing only nans and zeros
     dat_f = drop_nan_col(dat_f)
+    
+    #change the nan values to the median of the column
+    dat_f = nan_to_median(dat_f)
 
     return dat_f, mean, std
 
@@ -459,48 +458,3 @@ def build_k_indices(y, k_fold, seed):
                  for k in range(k_fold)]
     
     return np.array(k_indices)
-
-
-        
-def preprocessing(y,tX, degree):
-    # --- PREPROCESSING FOR HYPERPARAMETER OPTIMIZATION 3 SPLITS ---
-    #putting jet_num in the last column
-    tX[tX == -999] = np.nan
-
-    #split data based on jet_num
-    """WARNING tX must be unprocessed data so that the processing can
-    be jet_num specific WARNING""" 
-    #remove the jet_num column -> change the shape of the training set
-    pred_0, pred_1, pred_2, dat_0, dat_1, dat_2, inds_0, inds_1, inds_2 = split_jet_num(y,tX)
-
-    ##prepocessing
-    dat_0 = cols_log_transform(dat_0)
-    dat_1 = cols_log_transform(dat_1)
-    dat_2 = cols_log_transform(dat_2)
-
-    """we don't have the same shape because of jet_num removal
-    instead of (shape-1)*deg + 2 -> shape*deg +1"""
-    dat_0_ = np.zeros([dat_0.shape[0], (dat_0.shape[1])*degree[0] +1])
-    dat_1_ = np.zeros([dat_1.shape[0], (dat_1.shape[1])*degree[1] +1])
-    dat_2_ = np.zeros([dat_2.shape[0], (dat_2.shape[1])*degree[2] +1])
-
-    dat_0_ = build_poly(dat_0,degree[0])
-    dat_1_ = build_poly(dat_1,degree[1])
-    dat_2_ = build_poly(dat_2,degree[2])
-
-    #we don't standardize the first column because its the constant
-    #introduced by the build_poly
-    dat_0_[:,1:] = normalize_data_std(dat_0_[:,1:])
-    dat_1_[:,1:] = normalize_data_std(dat_1_[:,1:])
-    dat_2_[:,1:] = normalize_data_std(dat_2_[:,1:])
-
-    dat_0_ = nan_to_medi(dat_0_)
-    dat_1_ = nan_to_medi(dat_1_)
-    dat_2_ = nan_to_medi(dat_2_)
-    
-    #remove column with nan
-    dat_0_ = drop_nan_col(dat_0_)
-    dat_1_ = drop_nan_col(dat_1_)
-    dat_2_ = drop_nan_col(dat_2_)
-
-    return pred_0, pred_1, pred_2, dat_0_, dat_1_, dat_2_, inds_0, inds_1, inds_2
