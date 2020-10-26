@@ -13,10 +13,10 @@ The  dataset is divided into a training and a testing set composed of 250’000 
 ### Model's basic operations
 
 The model implemented in `run.py` loads the training set provided in the DATA_TRAIN_PATH (see Code execution) and several preprocessing steps are performed on this dataset in this order: 
-    1. Splitting of the features based on the PRI_jet_num categories (0,1 or 2&3) 
-    2. logarithmic transformation of selected features 
-    3. Polynomial augmentation of the features 
-    4. Standardization of the features. 
+1. Splitting of the features based on the PRI_jet_num categories (0,1 or 2&3) 
+2. logarithmic transformation of selected features 
+3. Polynomial augmentation of the features 
+4. Standardization of the features. 
     
 Afterwards, the model is trained using the ridge regression algorithm and weights are obtained. These weights are used to predict each labels of the splitted dataset and the predictions are finally merged and the submission file is created.
 
